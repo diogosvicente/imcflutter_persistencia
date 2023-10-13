@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:imcflutter_persistencia/model/pessoa.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ImcListPage extends StatefulWidget {
   const ImcListPage({Key? key}) : super(key: key);
@@ -17,7 +18,26 @@ class _ImcListPageState extends State<ImcListPage> {
       GlobalKey<RefreshIndicatorState>();
   bool showNameAndHeightFields = true; // Controle de visibilidade
 
-  void _showAddPesoDialog(BuildContext context) {
+  @override
+  void initState() {
+    super.initState();
+    _loadDataFromSharedPreferences();
+  }
+
+  _loadDataFromSharedPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String nome = prefs.getString('nome') ?? '';
+    double altura = prefs.getDouble('altura') ?? 0.0;
+
+    setState(() {
+      nomeController.text = nome;
+      alturaController.text = altura.toString();
+    });
+  }
+
+  void _showAddPesoDialog(BuildContext context) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
     showDialog(
       context: context,
       builder: (context) {
@@ -25,7 +45,7 @@ class _ImcListPageState extends State<ImcListPage> {
           title: const Text('Adicionar Peso'),
           content: Wrap(
             children: [
-              if (showNameAndHeightFields) // Mostrar apenas se a variável de controle permitir
+              if (showNameAndHeightFields)
                 Column(
                   children: [
                     TextField(
@@ -53,15 +73,18 @@ class _ImcListPageState extends State<ImcListPage> {
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                await prefs.setString('nome', nomeController.text);
+                await prefs.setDouble(
+                    'altura', double.parse(alturaController.text));
+
                 pessoa.setNome(nomeController.text);
                 pessoa.setAltura(double.parse(alturaController.text));
                 final peso = double.parse(pesoController.text);
                 pessoa.adicionarPeso(peso);
                 pesoController.clear();
                 setState(() {
-                  showNameAndHeightFields =
-                      false; // Após preencher, ocultar os campos
+                  showNameAndHeightFields = false;
                 });
                 Navigator.of(context).pop();
               },
@@ -76,6 +99,7 @@ class _ImcListPageState extends State<ImcListPage> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: Scaffold(
         appBar: AppBar(
           title: const Text('Calculadora de IMC'),
