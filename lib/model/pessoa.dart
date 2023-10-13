@@ -1,45 +1,40 @@
 class Pessoa {
   String _nome = "";
-  double _peso = 0;
   double _altura = 0;
+  List<double> _pesos = [];
 
-  Pessoa(String nome, double peso, double altura) {
-    setNome(nome);
-    setPeso(peso);
-    setAltura(altura);
-  }
-
-  void setNome(String nome) {
-    _nome = nome;
-  }
-
-  void setPeso(double peso) {
-    _peso = peso;
-  }
-
-  void setAltura(double altura) {
-    _altura = altura;
-  }
+  Pessoa.vazio();
+  Pessoa(this._nome, this._altura, this._pesos);
 
   String getNome() {
     return _nome;
-  }
-
-  double getPeso() {
-    return _peso;
   }
 
   double getAltura() {
     return _altura;
   }
 
-  double calcularImc() {
-    return _peso / (_altura * _altura);
+  void setNome(String nome) {
+    _nome = nome;
   }
 
-  String classificarImc() {
-    double imc = calcularImc();
+  void setAltura(double altura) {
+    _altura = altura;
+  }
 
+  void adicionarPeso(double peso) {
+    _pesos.add(peso);
+  }
+
+  List<double> getPesos() {
+    return _pesos;
+  }
+
+  double calcularIMC(double peso) {
+    return peso / (_altura * _altura);
+  }
+
+  String classificarIMC(double imc) {
     if (imc < 16.0) {
       return "Magreza grave";
     } else if (imc < 17.0) {
@@ -57,5 +52,15 @@ class Pessoa {
     } else {
       return "Obesidade Grau III (mórbida)";
     }
+  }
+
+  List<String> classificarIMCs() {
+    List<String> classificacoes = [];
+    for (double peso in _pesos) {
+      double imc = calcularIMC(peso);
+      String classificacao = classificarIMC(imc);
+      classificacoes.add(classificacao);
+    }
+    return classificacoes;
   }
 }
