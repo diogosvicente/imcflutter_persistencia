@@ -15,6 +15,7 @@ class _ImcListPageState extends State<ImcListPage> {
   Pessoa pessoa = Pessoa.vazio();
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
       GlobalKey<RefreshIndicatorState>();
+  bool showNameAndHeightFields = true; // Controle de visibilidade
 
   void _showAddPesoDialog(BuildContext context) {
     showDialog(
@@ -24,15 +25,20 @@ class _ImcListPageState extends State<ImcListPage> {
           title: const Text('Adicionar Peso'),
           content: Wrap(
             children: [
-              TextField(
-                controller: nomeController,
-                decoration: const InputDecoration(labelText: 'Nome'),
-              ),
-              TextField(
-                controller: alturaController,
-                decoration:
-                    const InputDecoration(labelText: 'Altura (em metros)'),
-              ),
+              if (showNameAndHeightFields) // Mostrar apenas se a variável de controle permitir
+                Column(
+                  children: [
+                    TextField(
+                      controller: nomeController,
+                      decoration: const InputDecoration(labelText: 'Nome'),
+                    ),
+                    TextField(
+                      controller: alturaController,
+                      decoration: const InputDecoration(
+                          labelText: 'Altura (em metros)'),
+                    ),
+                  ],
+                ),
               TextField(
                 controller: pesoController,
                 decoration: const InputDecoration(labelText: 'Peso (em kg)'),
@@ -53,7 +59,10 @@ class _ImcListPageState extends State<ImcListPage> {
                 final peso = double.parse(pesoController.text);
                 pessoa.adicionarPeso(peso);
                 pesoController.clear();
-                setState(() {});
+                setState(() {
+                  showNameAndHeightFields =
+                      false; // Após preencher, ocultar os campos
+                });
                 Navigator.of(context).pop();
               },
               child: const Text('Adicionar'),
@@ -79,19 +88,21 @@ class _ImcListPageState extends State<ImcListPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (pessoa.getPesos().isNotEmpty &&
+                if (!showNameAndHeightFields &&
+                    pessoa.getPesos().isNotEmpty &&
                     pessoa.classificarIMCs().isNotEmpty)
                   Container(
-                      padding: const EdgeInsets.all(5),
-                      child: Column(
-                        children: [
-                          Text(
-                            "${pessoa.getNome()}, Altura: ${pessoa.getAltura()}",
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                        ],
-                      )),
+                    padding: const EdgeInsets.all(5),
+                    child: Column(
+                      children: [
+                        Text(
+                          "${pessoa.getNome()}, Altura: ${pessoa.getAltura()}",
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  ),
                 Expanded(
                   child: ListView.builder(
                     itemCount: pessoa.getPesos().length,
