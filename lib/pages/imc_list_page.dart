@@ -1,6 +1,8 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:imcflutter_persistencia/model/pessoa.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:imcflutter_persistencia/services/app_storage_service.dart';
 
 class ImcListPage extends StatefulWidget {
   const ImcListPage({Key? key}) : super(key: key);
@@ -10,10 +12,23 @@ class ImcListPage extends StatefulWidget {
 }
 
 class _ImcListPageState extends State<ImcListPage> {
+  //nome
   var nomeController = TextEditingController();
-  var alturaController = TextEditingController();
+
+  //altura
+  final TextEditingController alturaDoubleController = TextEditingController();
+  var alturaDouble = 0.0;
+
+  //peso
   TextEditingController pesoController = TextEditingController();
+
+  //instancia do shared_preferences
+  AppStorageService storage = AppStorageService();
+
+  //construtor vazio
   Pessoa pessoa = Pessoa.vazio();
+
+  //exibir / esconder nome e altura
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
       GlobalKey<RefreshIndicatorState>();
   bool showNameAndHeightFields = true; // Controle de visibilidade
@@ -21,23 +36,18 @@ class _ImcListPageState extends State<ImcListPage> {
   @override
   void initState() {
     super.initState();
-    _loadDataFromSharedPreferences();
+    carregarImcCalculados();
   }
 
-  _loadDataFromSharedPreferences() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String nome = prefs.getString('nome') ?? '';
-    double altura = prefs.getDouble('altura') ?? 0.0;
+  void carregarImcCalculados() async {
+    nomeController.text = await storage.getImcNome();
+    double lastValue = await storage.getImcAltura();
+    alturaDoubleController.text = lastValue.toString();
 
-    setState(() {
-      nomeController.text = nome;
-      alturaController.text = altura.toString();
-    });
+    setState(() {});
   }
 
   void _showAddPesoDialog(BuildContext context) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-
     showDialog(
       context: context,
       builder: (context) {
@@ -53,7 +63,8 @@ class _ImcListPageState extends State<ImcListPage> {
                       decoration: const InputDecoration(labelText: 'Nome'),
                     ),
                     TextField(
-                      controller: alturaController,
+                      controller: alturaDoubleController,
+                      keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                           labelText: 'Altura (em metros)'),
                     ),
@@ -61,6 +72,7 @@ class _ImcListPageState extends State<ImcListPage> {
                 ),
               TextField(
                 controller: pesoController,
+                keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Peso (em kg)'),
               ),
             ],
@@ -74,12 +86,14 @@ class _ImcListPageState extends State<ImcListPage> {
             ),
             ElevatedButton(
               onPressed: () async {
-                await prefs.setString('nome', nomeController.text);
-                await prefs.setDouble(
-                    'altura', double.parse(alturaController.text));
+                try {
+                  alturaDouble = double.parse(alturaDoubleController.text);
+                } catch (e) {
+                  alturaDouble = 0.0;
+                }
+                await storage.setImcNome(nomeController.text);
+                await storage.setImcAltura(alturaDouble);
 
-                pessoa.setNome(nomeController.text);
-                pessoa.setAltura(double.parse(alturaController.text));
                 final peso = double.parse(pesoController.text);
                 pessoa.adicionarPeso(peso);
                 pesoController.clear();
@@ -120,7 +134,7 @@ class _ImcListPageState extends State<ImcListPage> {
                     child: Column(
                       children: [
                         Text(
-                          "${pessoa.getNome()}, Altura: ${pessoa.getAltura()}",
+                          "${nomeController.text}, Altura: $alturaDouble",
                           style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16),
                         ),
