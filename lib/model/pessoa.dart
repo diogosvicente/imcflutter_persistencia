@@ -66,4 +66,8 @@ class Pessoa {
     }
     return _imcClassificacoes;
   }
+
+  void limparPesos() {
+    _pesos.clear();
+  }
 }

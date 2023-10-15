@@ -29,7 +29,12 @@ class _ImcListPageState extends State<ImcListPage> {
   @override
   void initState() {
     super.initState();
-    _openHiveBox();
+    _initAsync();
+  }
+
+  Future<void> _initAsync() async {
+    await _openHiveBox();
+    carregarImcCalculados();
   }
 
   Future<void> _openHiveBox() async {
@@ -38,8 +43,6 @@ class _ImcListPageState extends State<ImcListPage> {
     } else {
       boxResultados = await Hive.openBox<List<String>>('box_resultados');
     }
-
-    carregarImcCalculados();
   }
 
   void carregarImcCalculados() async {
