@@ -2,6 +2,7 @@ class Pessoa {
   String _nome = "";
   double _altura = 0;
   List<double> _pesos = [];
+  final List<String> _imcClassificacoes = [];
 
   Pessoa.vazio();
   Pessoa(this._nome, this._altura, this._pesos);
@@ -55,12 +56,14 @@ class Pessoa {
   }
 
   List<String> classificarIMCs() {
-    List<String> classificacoes = [];
-    for (double peso in _pesos) {
+    _imcClassificacoes.clear();
+    for (int index = 0; index < _pesos.length; index++) {
+      double peso = _pesos[index];
       double imc = calcularIMC(peso);
       String classificacao = classificarIMC(imc);
-      classificacoes.add(classificacao);
+      String resultado = '${index + 1}: Peso $peso kg: $classificacao';
+      _imcClassificacoes.add(resultado);
     }
-    return classificacoes;
+    return _imcClassificacoes;
   }
 }

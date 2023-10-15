@@ -1,6 +1,5 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:imcflutter_persistencia/model/pessoa.dart';
 import 'package:imcflutter_persistencia/services/app_storage_service.dart';
 
@@ -12,39 +11,50 @@ class ImcListPage extends StatefulWidget {
 }
 
 class _ImcListPageState extends State<ImcListPage> {
-  //nome
-  var nomeController = TextEditingController();
+  final nomeController = TextEditingController();
+  final alturaDoubleController = TextEditingController();
+  final pesoDoubleController = TextEditingController();
 
-  //altura
-  final TextEditingController alturaDoubleController = TextEditingController();
-  var alturaDouble = 0.0;
-
-  //peso
-  TextEditingController pesoController = TextEditingController();
-
-  //instancia do shared_preferences
-  AppStorageService storage = AppStorageService();
-
-  //construtor vazio
-  Pessoa pessoa = Pessoa.vazio();
-
-  //exibir / esconder nome e altura
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
       GlobalKey<RefreshIndicatorState>();
-  bool showNameAndHeightFields = true; // Controle de visibilidade
+
+  bool showNameAndHeightFields = true;
+
+  late Box<List<String>> boxResultados;
+  List<String> resultados = [];
+
+  final AppStorageService storage = AppStorageService();
+  final Pessoa pessoa = Pessoa.vazio();
 
   @override
   void initState() {
     super.initState();
+    _openHiveBox();
+  }
+
+  Future<void> _openHiveBox() async {
+    if (Hive.isBoxOpen('box_resultados')) {
+      boxResultados = await Hive.openBox<List<String>>('box_resultados');
+    } else {
+      boxResultados = await Hive.openBox<List<String>>('box_resultados');
+    }
+
     carregarImcCalculados();
   }
 
   void carregarImcCalculados() async {
     nomeController.text = await storage.getImcNome();
-    double lastValue = await storage.getImcAltura();
-    alturaDoubleController.text = lastValue.toString();
+    double lastValueAltura = await storage.getImcAltura();
+    alturaDoubleController.text = lastValueAltura.toString();
+
+    resultados = boxResultados.get('chave_imcs') ?? [];
 
     setState(() {});
+  }
+
+  void salvarImcCalculados() {
+    resultados = pessoa.classificarIMCs();
+    boxResultados.put('chave_imcs', resultados);
   }
 
   void _showAddPesoDialog(BuildContext context) async {
@@ -66,12 +76,13 @@ class _ImcListPageState extends State<ImcListPage> {
                       controller: alturaDoubleController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                          labelText: 'Altura (em metros)'),
+                        labelText: 'Altura (em metros)',
+                      ),
                     ),
                   ],
                 ),
               TextField(
-                controller: pesoController,
+                controller: pesoDoubleController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Peso (em kg)'),
               ),
@@ -86,20 +97,25 @@ class _ImcListPageState extends State<ImcListPage> {
             ),
             ElevatedButton(
               onPressed: () async {
-                try {
-                  alturaDouble = double.parse(alturaDoubleController.text);
-                } catch (e) {
-                  alturaDouble = 0.0;
-                }
-                await storage.setImcNome(nomeController.text);
-                await storage.setImcAltura(alturaDouble);
+                storage.setImcNome(nomeController.text);
+                storage.setImcAltura(
+                    double.tryParse(alturaDoubleController.text) ?? 0.0);
 
-                final peso = double.parse(pesoController.text);
+                pessoa.setNome(nomeController.text);
+                pessoa.setAltura(
+                    double.tryParse(alturaDoubleController.text) ?? 0.0);
+
+                final peso = double.tryParse(pesoDoubleController.text) ?? 0.0;
                 pessoa.adicionarPeso(peso);
-                pesoController.clear();
+                pesoDoubleController.clear();
+
+                resultados = pessoa.classificarIMCs();
+                salvarImcCalculados();
+
                 setState(() {
                   showNameAndHeightFields = false;
                 });
+
                 Navigator.of(context).pop();
               },
               child: const Text('Adicionar'),
@@ -120,7 +136,10 @@ class _ImcListPageState extends State<ImcListPage> {
         ),
         body: RefreshIndicator(
           key: _refreshIndicatorKey,
-          onRefresh: () async {},
+          onRefresh: () async {
+            salvarImcCalculados();
+            setState(() {});
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 1),
             child: Column(
@@ -134,23 +153,21 @@ class _ImcListPageState extends State<ImcListPage> {
                     child: Column(
                       children: [
                         Text(
-                          "${nomeController.text}, Altura: $alturaDouble",
+                          "${nomeController.text}, Altura: ${alturaDoubleController.text}",
                           style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 Expanded(
                   child: ListView.builder(
-                    itemCount: pessoa.getPesos().length,
+                    itemCount: resultados.length,
                     itemBuilder: (context, index) {
-                      final pesos = pessoa.getPesos();
-                      final imcs = pessoa.classificarIMCs();
                       return ListTile(
-                        title: Text(
-                          "${index + 1}: Peso ${pesos[index]} kg: ${imcs[index]}",
-                        ),
+                        title: Text(resultados[index]),
                       );
                     },
                   ),
